@@ -33,7 +33,8 @@ Decisão dupla:
 """## Setup
 """
 
-!pip install -q ortools gurobipy
+# Commented out IPython magic to ensure Python compatibility.
+# %pip install -q ortools gurobipy
 
 import math
 import pandas as pd

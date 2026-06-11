@@ -27,7 +27,8 @@ Os 4 pontos-chave da API de callbacks do Gurobi estão marcados como `① ② �
 """## Setup
 """
 
-!pip install -q gurobipy matplotlib
+# Commented out IPython magic to ensure Python compatibility.
+# %pip install -q gurobipy matplotlib
 
 import math, time
 from itertools import product, combinations

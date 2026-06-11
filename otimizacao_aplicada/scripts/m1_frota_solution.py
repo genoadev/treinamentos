@@ -45,7 +45,8 @@ A partir deste treinamento mostramos cada modelo nos **dois solvers**:
 Os modelos aqui rodam todos no modo **free limited-size** (não precisa de licença), mas qualquer Gradus que já tenha licença Gurobi pode aplicar direto em escala.
 """
 
-!pip install -q ortools gurobipy
+# Commented out IPython magic to ensure Python compatibility.
+# %pip install -q ortools gurobipy
 
 from ortools.linear_solver import pywraplp
 import pandas as pd

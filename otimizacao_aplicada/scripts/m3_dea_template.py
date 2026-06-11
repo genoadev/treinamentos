@@ -30,7 +30,8 @@ Não podemos usar uma simples razão (output/input) porque há múltiplos inputs
 OR-Tools (open-source) + Gurobi (comercial, Genoa representa no Brasil). DEA é puramente LP — ambos resolvem trivialmente, e o ponto interessante é **quando você roda 100s de DMUs em sequência, a velocidade do Gurobi compensa**.
 """
 
-!pip install -q ortools gurobipy pandas
+# Commented out IPython magic to ensure Python compatibility.
+# %pip install -q ortools gurobipy pandas
 
 from ortools.linear_solver import pywraplp
 import pandas as pd

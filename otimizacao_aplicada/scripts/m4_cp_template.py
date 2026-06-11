@@ -46,7 +46,8 @@ Em MIP, regras 2, 3 e 6 viram big-M soup. Em CP-SAT, viram 3 linhas naturais.
 Neste módulo modelamos a escala de plantão **nos dois**. Spoiler: CP-SAT vence em tempo e legibilidade neste tipo de problema. Mas a versão Gurobi é útil quando a única licença disponível é a do Gurobi (cenário típico em consultoria com cliente que já investiu).
 """
 
-!pip install -q ortools gurobipy
+# Commented out IPython magic to ensure Python compatibility.
+# %pip install -q ortools gurobipy
 
 from ortools.sat.python import cp_model
 from itertools import product

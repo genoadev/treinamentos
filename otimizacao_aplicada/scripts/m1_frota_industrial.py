@@ -26,7 +26,7 @@ Neste notebook escalamos o caso para **40 bares** (cobertura Grande SP) e vemos:
 """## Setup
 """
 
-!pip install -q ortools gurobipy pandas
+#pip install -q ortools gurobipy pandas
 
 import random, math, time
 import pandas as pd

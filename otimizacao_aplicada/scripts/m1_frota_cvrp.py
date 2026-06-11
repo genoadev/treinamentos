@@ -28,7 +28,8 @@ Comparamos **3 abordagens**:
 """## Setup
 """
 
-!pip install -q ortools gurobipy pandas
+# Commented out IPython magic to ensure Python compatibility.
+# %pip install -q ortools gurobipy pandas
 
 import math, time
 import pandas as pd
