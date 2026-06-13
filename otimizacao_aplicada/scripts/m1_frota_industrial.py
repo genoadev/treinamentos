@@ -26,7 +26,8 @@ Neste notebook escalamos o caso para **40 bares** (cobertura Grande SP) e vemos:
 """## Setup
 """
 
-#pip install -q ortools gurobipy pandas
+# Commented out IPython magic to ensure Python compatibility.
+# %pip install -q ortools gurobipy pandas
 
 import random, math, time
 import pandas as pd
@@ -288,14 +289,77 @@ else:
     print(f"\n   Com licenca real, DFJ+lazy escalaria muito melhor que MTZ neste tamanho de problema.")
     print(f"   Lazy adicionadas antes de falhar: {res_dfj['n_lazy']}")
 
+"""## Cenário B — 1 caminhão grande (1.000 cx) — TSP puro
+
+**Trade-off pedagogico:** se em vez de manter a frota realista de ~13 caminhoes de 100 cx, simplificarmos para **1 caminhao gigante de 1.000 cx**, o problema vira **TSP puro** (sem capacidade real, sem indice de veiculo). Vamos verificar:
+
+- Modelo MTZ tem $N^2 \approx 1.700$ variaveis binarias (41 nos × 41) — **abaixo do limite free de 2.000**.
+- Demanda total ~880 cx cabe em 1 caminhao de 1.000 cx.
+- Custo: so o combustivel da rota; sem aluguel multiplo.
+
+**Pergunta:** se a operacao **aceitar** consolidar em 1 caminhao grande, free Gurobi resolve? E quanto se ganha em termos de modelagem-precisao em troca dessa simplificacao?
+"""
+
+from itertools import product
+
+def solve_tsp_gurobi_industrial(time_limit_s=30):
+    '''TSP puro: 1 caminhao percorre os 41 nos. Modelo MTZ.'''
+    m = gp.Model('industrial_tsp')
+    m.Params.OutputFlag = 0
+    m.Params.TimeLimit = time_limit_s
+
+    NN = range(N)   # N nos
+
+    # Variaveis: x[i,j] arco, u[i] ordem (MTZ)
+    x = m.addVars([(i, j) for i, j in product(NN, NN) if i != j],
+                  vtype=GRB.BINARY, name='x')
+    u = m.addVars(NN, lb=0, ub=N, name='u')
+
+    # Saida 1, entrada 1
+    m.addConstrs((x.sum(i, '*') == 1 for i in NN), name='out')
+    m.addConstrs((x.sum('*', j) == 1 for j in NN), name='in')
+
+    # MTZ
+    m.addConstrs((u[i] - u[j] + N * x[i, j] <= N - 1
+                  for i, j in product(NN, NN)
+                  if i != j and i != 0 and j != 0), name='mtz')
+
+    # FO: minimizar distancia total (D ja existe do cenario A)
+    m.setObjective(gp.quicksum(D[i,j] * x[i, j]
+                               for i, j in product(NN, NN) if i != j),
+                   GRB.MINIMIZE)
+
+    n_vars = m.NumVars
+    print(f'Modelo TSP: {n_vars} variaveis (binarias + u) — limite free: 2.000')
+
+    t0 = time.time()
+    try:
+        m.optimize()
+        return {'sucesso': True, 'dist': m.ObjVal if m.SolCount > 0 else None,
+                'gap': m.MIPGap if m.SolCount > 0 else None,
+                'status': m.Status, 'tempo_s': time.time() - t0,
+                'n_vars': n_vars}
+    except gp.GurobiError as e:
+        return {'sucesso': False, 'erro': str(e), 'tempo_s': time.time() - t0, 'n_vars': n_vars}
+
+res_tspB = solve_tsp_gurobi_industrial(time_limit_s=30)
+if res_tspB['sucesso']:
+    print(f"OK TSP Cenario B resolveu na free limited-size!")
+    print(f"   Distancia total: {res_tspB['dist']:.1f} km")
+    print(f"   Custo combustivel (R$ 4/km): R$ {res_tspB['dist']*4:.0f}")
+    print(f"   Gap: {res_tspB['gap']*100:.2f}%, tempo: {res_tspB['tempo_s']:.1f}s")
+    print(f"   Variaveis no modelo: {res_tspB['n_vars']}")
+else:
+    print(f"XX Falhou (inesperado): {res_tspB['erro'][:150]}")
+
 """## Comparacao final + licao
 
 ### O que aconteceu nesta sessao
 
 | Solver / Estrategia | Tempo | Custo | Status |
 |---|---|---|---|
-| OR-Tools `PATH_CHEAPEST` (sem busca local) | < 200 ms | R$ ~22 mil | OK Heuristica rapida |
-| OR-Tools + Guided Local Search (15 s) | 15 s | R$ ~22 mil (-0.2 %) | OK Busca local |
+| OR-Tools `PATH_CHEAPEST` (sem busca local) | < 200 ms | R\$ ~22 mil | OK Heuristica rapida |
+| OR-Tools + Guided Local Search (15 s) | 15 s | R\$ ~22 mil (-0.2 %) | OK Busca local |
 | Gurobi **MTZ** (free limited-size) | — | — | FAIL: license denied (modelo > 2 mil vars) |
 | Gurobi **DFJ + lazy** (free limited-size) | — | — | FAIL: mesmo bug, ainda fora do limite free |
 | Gurobi MTZ (licenca real) | minutos | gap pode demorar | WARN: formulacao fraca, B&B sofre |
@@ -321,4 +385,13 @@ else:
 ### O discurso na frente do cliente
 
 "A Genoa traz Gurobi quando o problema sai do didatico e entra no industrial. Para comecar, usamos OR-Tools (gratuito); quando o problema cresce de escala ou exige garantia de otimalidade, evoluimos para Gurobi com licenca adequada (Academic, WLS ou Commercial dependendo do cenario do cliente). E quando precisamos de **CVRP exato em escala**, DFJ+lazy e o caminho — nao MTZ."
+
+### Cenario B — 1 caminhao 1.000 cx (TSP puro)
+
+| Solver / Estrategia | Tempo | Resultado | Status |
+|---|---|---|---|
+| Gurobi MTZ (free limited-size) | ~5 s | distancia otima provada | OK Free RESOLVE — modelo cabe em 2 mil vars |
+| OR-Tools RoutingModel (TSP) | <300 ms | distancia otima heuristica | OK Rapido e bom |
+
+**Licao comercial:** o tamanho do modelo (e o teto da licenca free) depende da estrutura escolhida. Multi-CVRP eh fiel a operacao mas explode; TSP-com-1-caminhao-grande cabe no free mas perde granularidade por veiculo.
 """
